@@ -1,207 +1,123 @@
-# Netflix Content Recommender — NLP Model Comparison
+# 🎬 Netflix Content Recommender
+### *Which NLP model actually understands what you want to watch?*
 
-A content-based recommendation system that compares three NLP vectorization approaches across 8,807 Netflix titles. Built as an interactive web application with a FastAPI backend and a clean single-page frontend.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white"/>
+  <img src="https://img.shields.io/badge/SBERT-all--MiniLM--L6--v2-8B5CF6?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white"/>
+</p>
 
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.104%2B-009688?logo=fastapi&logoColor=white)
-![scikit-learn](https://img.shields.io/badge/scikit--learn-1.3%2B-F7931E?logo=scikit-learn&logoColor=white)
-![SBERT](https://img.shields.io/badge/SBERT-all--MiniLM--L6--v2-8B5CF6)
+<p align="center">
+  <b>8,807 Netflix titles. 3 NLP models. 1 winner.</b><br/>
+  An interactive deep-dive into how CountVectorizer, TF-IDF, and SBERT handle content-based recommendations — side by side, in real time.
+</p>
 
 ---
 
-## Overview
+## The Idea
 
-Given any Netflix title, the system finds the most similar content by comparing metadata (title, director, cast, genre, description) using three vectorization strategies:
+You search *"Peaky Blinders"* and want something with the same gritty, crime-drama energy. But does a model that counts raw word frequencies actually get that? What about one that weighs rare words more? Or a transformer that *reads between the lines?*
 
-| Model | Approach | Build Time | Avg Cosine Similarity |
+This app lets you find out — instantly, visually, and with hard numbers.
+
+---
+
+## What Makes It Interesting
+
+| | CountVectorizer | TF-IDF | SBERT |
 |---|---|---|---|
-| **CountVectorizer** | Raw term frequency (bag-of-words) | ~0.4s | 0.0579 |
-| **TF-IDF** | Weighted frequency (penalises common words) | ~0.5s | 0.0209 |
-| **SBERT** | Semantic sentence embeddings (`all-MiniLM-L6-v2`) | ~10s | 0.2191 |
+| **Approach** | Bag of words | Weighted frequency | Semantic embeddings |
+| **Build Time** | ~0.4s | ~0.5s | ~10s |
+| **Avg Cosine Similarity** | 0.058 | 0.021 | **0.219** |
+| **Gets meaning?** | No | No | **Yes** |
 
-The higher average similarity for SBERT reflects its ability to capture thematic meaning — not noise — which makes it the most accurate model for semantic recommendations.
+> SBERT's higher similarity isn't noise — it's signal. The transformer actually understands that "gangster drama set in post-war England" and "crime thriller" mean something similar.
 
 ---
 
 ## Features
 
-- **Live autocomplete** search across all 8,807 titles
-- **Model selector** — switch between CountVectorizer, TF-IDF, and SBERT in one click
-- **Rich result cards** — title, type, year, rating, duration, genres, description, director, cast, and a similarity score bar
-- **Model status indicators** — real-time dots showing which models have finished loading
-- **Performance comparison panel** — build time, vocabulary size, avg cosine similarity, and pros/cons for each model
-- **Responsive design** — works on desktop and mobile
+- **Live autocomplete** across all 8,807 titles
+- **Real-time model status** — watch CountVectorizer and TF-IDF snap online in < 1s, then SBERT spin up
+- **Switch models mid-search** — same title, completely different results
+- **Rich result cards** — similarity score bar, genre tags, cast, director, rating, description
+- **Performance panel** — build time, vocabulary size, and avg similarity for each model
+- **Zero dependencies on the frontend** — pure HTML, CSS, and JS
 
 ---
 
-## Project Structure
-
-```
-Netflix_Recommendation/
-├── app.py                          # FastAPI backend — model building & API endpoints
-├── requirements.txt                # Python dependencies
-├── netflix_titles.csv              # Dataset (8,807 titles)
-├── static/
-│   └── index.html                  # Single-page frontend (HTML + CSS + JS)
-└── nlp_a3_Wed(Evening)Group17.ipynb  # Original research notebook
-```
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.9 or higher
-- pip
-
-### Installation
+## Quickstart
 
 ```bash
-git clone https://github.com/your-username/Netflix_Recommendation.git
-cd Netflix_Recommendation
+git clone https://github.com/briantong02/Netflix_Recommendation-.git
+cd Netflix_Recommendation-
 pip install -r requirements.txt
-```
-
-### Running the App
-
-```bash
 uvicorn app:app --reload
 ```
 
-Then open [http://localhost:8000](http://localhost:8000) in your browser.
-
-> **Note:** CountVectorizer and TF-IDF load in under a second. SBERT (`all-MiniLM-L6-v2`) takes ~10 seconds to build on first run and will download the model weights (~90 MB) if not already cached. The UI shows live loading status for each model.
-
----
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/status` | Loading status for each model (`loading` / `ready` / `error`) |
-| `GET` | `/api/titles` | List of all 8,807 titles (used for autocomplete) |
-| `GET` | `/api/recommend` | Get recommendations for a given title |
-| `GET` | `/api/metrics` | Build time and similarity stats for each model |
-
-### Example — Get Recommendations
-
-```bash
-curl "http://localhost:8000/api/recommend?title=Peaky+Blinders&model=tfidf&top_n=5"
-```
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `title` | string | required | Exact Netflix title |
-| `model` | string | `tfidf` | One of: `count`, `tfidf`, `sbert` |
-| `top_n` | integer | `10` | Number of results (1–20) |
-
-**Response:**
-
-```json
-{
-  "query_title": "Peaky Blinders",
-  "model": "tfidf",
-  "query_movie": {
-    "title": "Peaky Blinders",
-    "type": "TV Show",
-    "release_year": 2019,
-    "rating": "TV-MA",
-    "duration": "5 Seasons",
-    "genres": ["British Tv Shows", "Crime Tv Shows", "International Tv Shows"],
-    "description": "A notorious gang in 1919 Birmingham...",
-    ...
-  },
-  "results": [
-    {
-      "title": "Inception",
-      "similarity": 0.1382,
-      "type": "Movie",
-      "genres": ["Action & Adventure", "Thrillers"],
-      ...
-    }
-  ],
-  "max_similarity": 0.1382
-}
-```
+Open **http://localhost:8000** — CountVectorizer and TF-IDF are ready almost instantly. SBERT downloads ~90 MB of model weights on first run and is ready in ~10 seconds. The UI shows live loading status so you always know what's ready.
 
 ---
 
 ## How It Works
 
-### Data Preprocessing
-
-Each title's metadata is combined into a single text `soup`:
-
-```python
-soup = title + director + cast + listed_in + description
-```
-
-All text is lowercased. Missing values are replaced with empty strings.
-
-### CountVectorizer
-
-Builds a sparse term-frequency matrix using scikit-learn's `CountVectorizer` with English stop-word removal. Each title becomes a vector of raw word counts. Similarity is computed via cosine similarity.
-
-**Strength:** Fast, interpretable, good at matching exact keywords.  
-**Weakness:** Treats all words equally regardless of how common they are.
-
-### TF-IDF
-
-Uses `TfidfVectorizer` to weight each term by how frequently it appears in a title (`TF`) divided by how common it is across all titles (`IDF`). Words like *"the"* or *"a"* are down-weighted; unique descriptive terms are up-weighted.
-
-**Strength:** More discriminative and precise than raw counts.  
-**Weakness:** Still purely lexical — no understanding of meaning.
-
-### SBERT (Sentence-BERT)
-
-Encodes each `soup` string into a 384-dimensional dense vector using the `all-MiniLM-L6-v2` transformer model with L2 normalization. Captures semantic meaning rather than exact word overlap.
-
-**Strength:** Understands synonyms, context, and thematic similarity.  
-**Weakness:** Slower to build; requires PyTorch.
-
-### Similarity
-
-All three models use **cosine similarity** to rank candidates:
+Every title's metadata is fused into a single text `soup`:
 
 ```
-similarity(A, B) = (A · B) / (||A|| × ||B||)
+soup = title + director + cast + genres + description
 ```
 
-Result scores are normalised relative to the top result in each query and displayed as a percentage bar in the UI.
+Then each model vectorizes that soup differently:
+
+**CountVectorizer** — raw word counts. Fast, interpretable, no understanding of importance.
+
+**TF-IDF** — penalises common words, rewards rare ones. More discriminative, still purely lexical.
+
+**SBERT (`all-MiniLM-L6-v2`)** — encodes each soup into a 384-dimensional dense vector using a fine-tuned transformer. Captures *meaning*, not just word overlap. Synonyms, themes, tone — it gets all of it.
+
+All three rank results using **cosine similarity**.
+
+---
+
+## API
+
+```bash
+# Get recommendations
+curl "http://localhost:8000/api/recommend?title=Peaky+Blinders&model=sbert&top_n=5"
+
+# Check which models are loaded
+curl "http://localhost:8000/api/status"
+
+# Get performance metrics
+curl "http://localhost:8000/api/metrics"
+```
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/recommend` | Recommendations for a title (`model`: `count`/`tfidf`/`sbert`, `top_n`: 1–20) |
+| `GET /api/status` | Loading state of each model |
+| `GET /api/titles` | All 8,807 titles (for autocomplete) |
+| `GET /api/metrics` | Build time, vocab size, avg similarity per model |
 
 ---
 
 ## Dataset
 
-**Source:** [Netflix Movies and TV Shows](https://www.kaggle.com/datasets/shivamb/netflix-shows) — Kaggle  
-**Size:** 8,807 titles (6,131 Movies + 2,676 TV Shows)  
-**Fields used:** `title`, `director`, `cast`, `listed_in`, `description`
+[Netflix Movies and TV Shows](https://www.kaggle.com/datasets/shivamb/netflix-shows) via Kaggle — 8,807 titles (6,131 movies + 2,676 TV shows).
 
 ---
 
-## Tech Stack
+## Stack
 
-- **Backend:** Python, FastAPI, uvicorn
-- **ML / NLP:** scikit-learn, sentence-transformers, numpy, scipy
-- **Data:** pandas
-- **Frontend:** Vanilla HTML, CSS, JavaScript (no framework dependencies)
+`Python` · `FastAPI` · `scikit-learn` · `sentence-transformers` · `pandas` · `numpy` · `Vanilla JS`
 
 ---
 
 ## Research Notebook
 
-The original analysis (`nlp_a3_Wed(Evening)Group17.ipynb`) covers:
-
-- Model construction and timing benchmarks
-- Pairwise cosine similarity distribution histograms for all three models
-- Qualitative comparison of recommendation output per model
-- Discussion of why SBERT's higher average similarity reflects semantic density, not noise
+`nlp_a3_Wed(Evening)Group17.ipynb` contains the full analysis: model benchmarks, cosine similarity distribution histograms, qualitative output comparisons, and a breakdown of why SBERT's higher average similarity reflects semantic density rather than overfitting.
 
 ---
 
-## License
-
-MIT
+<p align="center">Built for NLP coursework · Group 17 · Wed Evening</p>
