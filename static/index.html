@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Netflix Content Recommender · NLP Model Comparison</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #09090f;
+      --surface:     #111118;
+      --card:        #16161e;
+      --card-hover:  #1d1d28;
+      --border:      rgba(255,255,255,0.07);
+      --border-hi:   rgba(255,255,255,0.14);
+      --red:         #e50914;
+      --red-muted:   rgba(229,9,20,0.12);
+      --indigo:      #818cf8;
+      --indigo-muted:rgba(129,140,248,0.12);
+      --green:       #4ade80;
+      --yellow:      #fbbf24;
+      --text:        #f0f0f0;
+      --text-2:      #9090a8;
+      --text-3:      #55556a;
+      --radius:      14px;
+      --radius-sm:   8px;
+      --t:           0.18s ease;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Scrollbar ──────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+    /* ── Header ─────────────────────────────────────── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(9,9,15,0.88);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-inner {
+      max-width: 1200px; margin: 0 auto; padding: 0 2rem;
+      height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      width: 36px; height: 36px; background: var(--red);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 18px; color: #fff; flex-shrink: 0;
+      box-shadow: 0 4px 16px rgba(229,9,20,0.35);
+    }
+    .brand-name { font-size: 16px; font-weight: 700; }
+    .brand-sub  { font-size: 11px; color: var(--text-3); font-weight: 400; }
+
+    .header-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag {
+      padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 500;
+      border: 1px solid rgba(129,140,248,0.25); background: var(--indigo-muted); color: var(--indigo);
+    }
+
+    /* ── Layout ─────────────────────────────────────── */
+    main { max-width: 1200px; margin: 0 auto; padding: 3.5rem 2rem 6rem; }
+
+    /* ── Hero ───────────────────────────────────────── */
+    .hero { text-align: center; padding: 2.5rem 0 3rem; }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.4rem); font-weight: 800; letter-spacing: -0.03em;
+      background: linear-gradient(150deg, #fff 20%, #aaaacc 80%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 1rem;
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--red) 0%, #ff6060 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero p { color: var(--text-2); font-size: 1.05rem; max-width: 520px; margin: 0 auto 1.5rem; }
+    .hero-tags { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+
+    /* ── Panel ──────────────────────────────────────── */
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 2rem; margin-bottom: 2rem;
+    }
+
+    .label {
+      font-size: 11px; font-weight: 700; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 8px;
+    }
+
+    /* ── Search ─────────────────────────────────────── */
+    .search-wrap { position: relative; margin-bottom: 1.75rem; }
+    .search-icon {
+      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+      color: var(--text-3); pointer-events: none;
+    }
+    #search-input {
+      width: 100%; padding: 14px 46px; background: var(--card);
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 15px; font-family: inherit;
+      transition: border-color var(--t), box-shadow var(--t); outline: none;
+    }
+    #search-input:focus {
+      border-color: rgba(229,9,20,0.55);
+      box-shadow: 0 0 0 4px rgba(229,9,20,0.08);
+    }
+    #search-input::placeholder { color: var(--text-3); }
+    #search-input.shake { animation: shake 0.4s ease; }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60%  { transform: translateX(-6px); }
+      40%,80%  { transform: translateX(6px); }
+    }
+
+    .clear-btn {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--text-3); cursor: pointer;
+      padding: 4px; border-radius: 4px; display: none; align-items: center;
+      transition: color var(--t);
+    }
+    .clear-btn:hover { color: var(--text); }
+    .clear-btn.show { display: flex; }
+
+    /* Autocomplete */
+    .ac-drop {
+      position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      max-height: 280px; overflow-y: auto; z-index: 300; display: none;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+    }
+    .ac-drop.open { display: block; }
+    .ac-item {
+      padding: 10px 16px; cursor: pointer; font-size: 14px; color: var(--text-2);
+      border-bottom: 1px solid rgba(255,255,255,0.04); transition: background var(--t), color var(--t);
+    }
+    .ac-item:last-child { border-bottom: none; }
+    .ac-item:hover, .ac-item.hi { background: var(--card-hover); color: var(--text); }
+    .ac-item mark { background: none; color: var(--red); font-weight: 600; }
+
+    /* ── Model Selector ──────────────────────────────── */
+    .model-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 1.75rem; }
+    .model-card {
+      background: var(--card); border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 1rem 1.1rem; cursor: pointer; transition: all var(--t); position: relative;
+    }
+    .model-card:hover:not(.off) { border-color: var(--border-hi); }
+    .model-card.active { border-color: var(--red); background: rgba(229,9,20,0.06); }
+    .model-card.active .mc-name { color: var(--red); }
+    .model-card.off { opacity: 0.45; cursor: not-allowed; }
+
+    .mc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--text-3);
+      flex-shrink: 0; transition: background var(--t);
+    }
+    .dot.ready   { background: var(--green); }
+    .dot.loading { background: var(--yellow); animation: blink 1.4s ease-in-out infinite; }
+    .dot.error   { background: var(--red); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+    .mc-name { font-size: 14px; font-weight: 700; color: var(--text); }
+    .mc-desc { font-size: 12px; color: var(--text-3); line-height: 1.4; margin-bottom: 8px; }
+    .mc-pill {
+      font-size: 10px; padding: 2px 8px; border-radius: 100px;
+      background: var(--indigo-muted); color: var(--indigo); border: 1px solid rgba(129,140,248,0.2);
+    }
+
+    /* ── Controls Row ────────────────────────────────── */
+    .controls-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .ctrl { display: flex; align-items: center; gap: 10px; color: var(--text-2); font-size: 13px; }
+    .ctrl label { font-weight: 600; white-space: nowrap; }
+
+    input[type=range] {
+      -webkit-appearance: none; appearance: none;
+      width: 100px; height: 4px; background: rgba(255,255,255,0.1);
+      border-radius: 2px; outline: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 16px; height: 16px;
+      border-radius: 50%; background: var(--red); cursor: pointer;
+      box-shadow: 0 0 6px rgba(229,9,20,0.5);
+    }
+    #top-n-val { min-width: 22px; text-align: center; font-weight: 700; color: var(--text); }
+
+    .btn {
+      padding: 11px 26px; border: none; border-radius: var(--radius-sm);
+      font-family: inherit; font-weight: 600; font-size: 14px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px; transition: all var(--t);
+    }
+    .btn-primary {
+      background: var(--red); color: #fff; margin-left: auto;
+      box-shadow: 0 2px 12px rgba(229,9,20,0.25);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: #ff1f2a; transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(229,9,20,0.4);
+    }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ── Results Section ─────────────────────────────── */
+    #results-section { display: none; margin-bottom: 1rem; }
+    #results-section.show { display: block; }
+
+    .results-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .results-title { font-size: 1.3rem; font-weight: 700; }
+    .results-title span { color: var(--red); }
+    .results-meta { font-size: 12px; color: var(--text-3); }
+
+    /* Query card */
+    .section-label { font-size: 10px; font-weight: 800; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+
+    .q-card {
+      display: flex; gap: 1.25rem;
+      background: linear-gradient(135deg, rgba(229,9,20,0.07) 0%, var(--surface) 60%);
+      border: 1px solid rgba(229,9,20,0.22); border-radius: var(--radius); padding: 1.4rem;
+      margin-bottom: 2rem;
+    }
+    .q-icon {
+      width: 52px; height: 52px; flex-shrink: 0; border-radius: 12px;
+      background: var(--red-muted); border: 1px solid rgba(229,9,20,0.25);
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .q-body { flex: 1; min-width: 0; }
+    .q-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
+
+    /* Meta row */
+    .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+    .chip {
+      font-size: 11px; padding: 2px 9px; border-radius: 100px;
+      background: rgba(255,255,255,0.06); color: var(--text-2); border: 1px solid var(--border);
+    }
+    .type-badge {
+      font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .type-movie { background: var(--indigo-muted); color: var(--indigo); border: 1px solid rgba(129,140,248,0.25); }
+    .type-tv    { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.25); }
+
+    .genres { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .genre  {
+      font-size: 10px; padding: 2px 7px; border-radius: 100px;
+      background: var(--indigo-muted); color: var(--indigo); border: 1px solid rgba(129,140,248,0.15);
+    }
+
+    .desc {
+      font-size: 13px; color: var(--text-2); line-height: 1.6;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    /* ── Results Grid ────────────────────────────────── */
+    .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }
+
+    /* Movie Card */
+    .mv-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1.15rem; display: flex; flex-direction: column; gap: 9px;
+      transition: all var(--t);
+    }
+    .mv-card:hover {
+      border-color: var(--border-hi); background: var(--card-hover);
+      transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .card-title { font-size: 14px; font-weight: 600; line-height: 1.35; flex: 1; }
+
+    .sim-badge {
+      flex-shrink: 0; font-size: 11px; font-weight: 800; padding: 3px 7px;
+      border-radius: 6px; letter-spacing: 0.02em;
+    }
+    .sim-h { background: rgba(74,222,128,0.13); color: var(--green); border: 1px solid rgba(74,222,128,0.28); }
+    .sim-m { background: rgba(251,191,36,0.13); color: var(--yellow); border: 1px solid rgba(251,191,36,0.28); }
+    .sim-l { background: rgba(229,9,20,0.12); color: #ff7070; border: 1px solid rgba(229,9,20,0.22); }
+
+    .sim-track { height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+    .sim-fill  { height: 100%; border-radius: 2px; transition: width 0.7s cubic-bezier(.4,0,.2,1); }
+    .sim-fill-h { background: linear-gradient(90deg,#16a34a,#4ade80); }
+    .sim-fill-m { background: linear-gradient(90deg,#b45309,#fbbf24); }
+    .sim-fill-l { background: linear-gradient(90deg,var(--red),#ff7070); }
+
+    .card-desc {
+      font-size: 12px; color: var(--text-3); line-height: 1.55; flex: 1;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .card-footer {
+      display: flex; gap: 5px; font-size: 11px; color: var(--text-3);
+      padding-top: 8px; border-top: 1px solid var(--border); flex-wrap: wrap; align-items: center;
+    }
+    .card-footer svg { flex-shrink: 0; }
+
+    /* ── Metrics Section ─────────────────────────────── */
+    .metrics-section { margin-top: 3.5rem; padding-top: 3rem; border-top: 1px solid var(--border); }
+    .section-title    { font-size: 1.3rem; font-weight: 700; margin-bottom: 6px; }
+    .section-sub      { font-size: 13px; color: var(--text-3); margin-bottom: 2rem; }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    .m-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1.4rem; transition: border-color var(--t);
+    }
+    .m-card:hover   { border-color: var(--border-hi); }
+    .m-card.current { border-color: var(--red); background: rgba(229,9,20,0.04); }
+
+    .m-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+    .m-sub  { font-size: 11px; color: var(--text-3); margin-bottom: 1.2rem; }
+
+    .m-row  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .m-key  { font-size: 12px; color: var(--text-3); }
+    .m-val  { font-size: 13px; font-weight: 600; }
+    .m-bar  { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-bottom: 10px; overflow: hidden; }
+    .m-fill { height: 100%; background: var(--red); border-radius: 2px; }
+
+    .pc-list { margin-top: 1rem; display: flex; flex-direction: column; gap: 4px; }
+    .pc      { font-size: 11.5px; display: flex; gap: 6px; align-items: flex-start; }
+    .pc.pro  { color: var(--green); }
+    .pc.con  { color: #ff7070; }
+
+    /* ── Skeleton ────────────────────────────────────── */
+    .sk {
+      background: linear-gradient(90deg, var(--card) 25%, var(--card-hover) 50%, var(--card) 75%);
+      background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    /* ── Empty / Error ───────────────────────────────── */
+    .empty {
+      grid-column: 1/-1; text-align: center; padding: 3rem;
+      color: var(--text-3); display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .empty svg { opacity: 0.3; }
+    .empty p { font-size: 14px; }
+
+    /* ── Spinner ─────────────────────────────────────── */
+    .spin {
+      width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff; border-radius: 50%; animation: rotate 0.65s linear infinite; flex-shrink: 0;
+    }
+    @keyframes rotate { to { transform: rotate(360deg); } }
+
+    /* ── Toast ───────────────────────────────────────── */
+    @keyframes toastIn { from{transform:translateX(110%);opacity:0} to{transform:translateX(0);opacity:1} }
+
+    /* ── Footer ──────────────────────────────────────── */
+    footer {
+      text-align: center; padding: 2rem;
+      color: var(--text-3); font-size: 12px; border-top: 1px solid var(--border); margin-top: 4rem;
+    }
+    footer span { color: var(--red); }
+
+    /* ── Responsive ──────────────────────────────────── */
+    @media (max-width: 900px) {
+      .metrics-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 720px) {
+      main { padding: 2rem 1rem 4rem; }
+      .model-grid { grid-template-columns: 1fr; }
+      .header-tags { display: none; }
+      .controls-row { flex-direction: column; align-items: stretch; }
+      .btn-primary { width: 100%; justify-content: center; margin-left: 0; }
+      .q-card { flex-direction: column; }
+      .results-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-icon">N</div>
+      <div>
+        <div class="brand-name">Content Recommender</div>
+        <div class="brand-sub">NLP Model Comparison</div>
+      </div>
+    </div>
+    <div class="header-tags">
+      <span class="tag">Python</span>
+      <span class="tag">FastAPI</span>
+      <span class="tag">SBERT</span>
+      <span class="tag">TF-IDF</span>
+      <span class="tag">scikit-learn</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ───────────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Discover <em>Similar</em> Content</h1>
+    <p>Compare three NLP vectorization approaches for content-based filtering across 8,807 Netflix titles.</p>
+    <div class="hero-tags">
+      <span class="tag">CountVectorizer</span>
+      <span class="tag">TF-IDF</span>
+      <span class="tag">SBERT all-MiniLM-L6-v2</span>
+      <span class="tag">Cosine Similarity</span>
+    </div>
+  </div>
+
+  <!-- Search Panel -->
+  <div class="panel">
+
+    <!-- Search Input -->
+    <div class="label">Find a title</div>
+    <div class="search-wrap" style="margin-bottom:1.75rem">
+      <svg class="search-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="search-input" placeholder='Try "Peaky Blinders", "Inception", "Stranger Things"…' autocomplete="off" />
+      <button class="clear-btn" id="clear-btn" title="Clear">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+      <div class="ac-drop" id="ac-drop"></div>
+    </div>
+
+    <!-- Model Selector -->
+    <div class="label">Select model</div>
+    <div class="model-grid" id="model-grid">
+      <div class="model-card" data-model="count">
+        <div class="mc-top"><span class="dot loading" id="dot-count"></span><span class="mc-name">CountVectorizer</span></div>
+        <div class="mc-desc">Raw term frequency — fast sparse matching on exact keywords</div>
+        <span class="mc-pill">Sparse · Bag-of-Words</span>
+      </div>
+      <div class="model-card active" data-model="tfidf">
+        <div class="mc-top"><span class="dot loading" id="dot-tfidf"></span><span class="mc-name">TF-IDF</span></div>
+        <div class="mc-desc">Down-weights common words, rewards terms unique to each title</div>
+        <span class="mc-pill">Sparse · Weighted</span>
+      </div>
+      <div class="model-card" data-model="sbert">
+        <div class="mc-top"><span class="dot loading" id="dot-sbert"></span><span class="mc-name">SBERT</span></div>
+        <div class="mc-desc">Deep semantic embeddings — understands meaning beyond exact words</div>
+        <span class="mc-pill">Dense · Transformer</span>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-row">
+      <div class="ctrl">
+        <label for="top-n">Results</label>
+        <input type="range" id="top-n" min="5" max="20" value="10" step="1" />
+        <span id="top-n-val">10</span>
+      </div>
+      <button class="btn btn-primary" id="rec-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        Get Recommendations
+      </button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results-section">
+    <div class="section-label">Based on</div>
+    <div class="q-card" id="q-card"></div>
+
+    <div class="results-header">
+      <div>
+        <div class="results-title" id="results-title">Recommendations</div>
+        <div class="results-meta" id="results-meta"></div>
+      </div>
+    </div>
+    <div class="results-grid" id="results-grid"></div>
+  </div>
+
+  <!-- Model Metrics -->
+  <div class="metrics-section">
+    <div class="section-title">Model Performance</div>
+    <div class="section-sub">Build time, vocabulary size, and average pairwise cosine similarity across 8,807 titles</div>
+    <div class="metrics-grid" id="metrics-grid"></div>
+  </div>
+
+</main>
+
+<footer>
+  Built with <span>♥</span> · Python · FastAPI · scikit-learn · sentence-transformers · 8,807 Netflix titles
+</footer>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const S = {
+  titles:  [],
+  title:   '',
+  model:   'tfidf',
+  topN:    10,
+  status:  { count:'loading', tfidf:'loading', sbert:'loading' },
+  busy:    false,
+};
+
+// ── DOM ───────────────────────────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const searchInput  = $('search-input');
+const clearBtn     = $('clear-btn');
+const acDrop       = $('ac-drop');
+const modelGrid    = $('model-grid');
+const topNSlider   = $('top-n');
+const topNVal      = $('top-n-val');
+const recBtn       = $('rec-btn');
+const resultsSection = $('results-section');
+const qCard        = $('q-card');
+const resultsGrid  = $('results-grid');
+const resultsTitle = $('results-title');
+const resultsMeta  = $('results-meta');
+const metricsGrid  = $('metrics-grid');
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  setupSearch();
+  setupModels();
+  setupControls();
+  renderMetrics({});         // render placeholder cards immediately
+  await loadTitles();
+  pollStatus();
+})();
+
+// ── Titles ────────────────────────────────────────────────────────────────────
+async function loadTitles() {
+  try {
+    const r = await fetch('/api/titles');
+    S.titles = await r.json();
+  } catch(e) { /* retry on next poll */ }
+}
+
+// ── Status polling ────────────────────────────────────────────────────────────
+async function pollStatus() {
+  try {
+    const r   = await fetch('/api/status');
+    const st  = await r.json();
+    const wasAll = allReady(S.status);
+    S.status = st;
+    updateDots(st);
+
+    if (!wasAll && allReady(st)) {
+      await loadTitles();
+      const mr = await fetch('/api/metrics');
+      renderMetrics(await mr.json());
+    }
+  } catch(e) {}
+
+  if (!allReady(S.status)) setTimeout(pollStatus, 2000);
+}
+
+function allReady(st) { return Object.values(st).every(v => v === 'ready'); }
+
+function updateDots(st) {
+  for (const [m, v] of Object.entries(st)) {
+    const dot  = $(`dot-${m}`);
+    const card = modelGrid.querySelector(`[data-model="${m}"]`);
+    if (!dot || !card) continue;
+    dot.className = 'dot ' + (v === 'ready' ? 'ready' : v.startsWith('error') ? 'error' : 'loading');
+    card.classList.toggle('off', v !== 'ready');
+  }
+}
+
+// ── Autocomplete ──────────────────────────────────────────────────────────────
+let acIdx = -1;
+
+function setupSearch() {
+  searchInput.addEventListener('input', onInput);
+  searchInput.addEventListener('keydown', onKey);
+  searchInput.addEventListener('focus', () => { if (searchInput.value.length >= 2) showAc(searchInput.value); });
+  document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) closeAc(); });
+  clearBtn.addEventListener('click', () => {
+    searchInput.value = ''; S.title = '';
+    clearBtn.classList.remove('show'); closeAc(); searchInput.focus();
+  });
+}
+
+function onInput(e) {
+  const v = e.target.value;
+  clearBtn.classList.toggle('show', v.length > 0);
+  v.length >= 2 ? showAc(v) : closeAc();
+}
+
+function onKey(e) {
+  const items = [...acDrop.querySelectorAll('.ac-item')];
+  if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = Math.min(acIdx+1, items.length-1); hlAc(items); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = Math.max(acIdx-1, -1); hlAc(items); }
+  else if (e.key === 'Enter') { e.preventDefault(); acIdx >= 0 && items[acIdx] ? pickTitle(items[acIdx].dataset.t) : fetchRecs(); }
+  else if (e.key === 'Escape') closeAc();
+}
+
+function hlAc(items) {
+  items.forEach((el,i) => el.classList.toggle('hi', i === acIdx));
+  items[acIdx]?.scrollIntoView({ block:'nearest' });
+}
+
+function showAc(query) {
+  acIdx = -1;
+  const q = query.toLowerCase();
+  const hits = S.titles.filter(t => t.toLowerCase().includes(q)).slice(0, 9);
+  if (!hits.length) { closeAc(); return; }
+
+  acDrop.innerHTML = hits.map(t => {
+    const hi = t.replace(new RegExp(`(${rxEsc(q)})`, 'gi'), '<mark>$1</mark>');
+    return `<div class="ac-item" data-t="${attr(t)}">${hi}</div>`;
+  }).join('');
+
+  acDrop.querySelectorAll('.ac-item').forEach(el =>
+    el.addEventListener('mousedown', ev => { ev.preventDefault(); pickTitle(el.dataset.t); })
+  );
+  acDrop.classList.add('open');
+}
+
+function closeAc() { acDrop.classList.remove('open'); }
+
+function pickTitle(t) {
+  S.title = t; searchInput.value = t;
+  clearBtn.classList.add('show'); closeAc();
+}
+
+// ── Model Selector ────────────────────────────────────────────────────────────
+function setupModels() {
+  modelGrid.querySelectorAll('.model-card').forEach(c => {
+    c.addEventListener('click', () => {
+      if (c.classList.contains('off')) return;
+      S.model = c.dataset.model;
+      modelGrid.querySelectorAll('.model-card').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+    });
+  });
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+function setupControls() {
+  topNSlider.addEventListener('input', () => { S.topN = +topNSlider.value; topNVal.textContent = S.topN; });
+  recBtn.addEventListener('click', fetchRecs);
+}
+
+// ── Fetch Recommendations ─────────────────────────────────────────────────────
+async function fetchRecs() {
+  const title = S.title || searchInput.value.trim();
+  if (!title) { searchInput.classList.add('shake'); setTimeout(() => searchInput.classList.remove('shake'), 400); return; }
+  if (S.status[S.model] !== 'ready') { toast(`Model "${S.model}" is still loading — please wait.`); return; }
+  if (S.busy) return;
+
+  S.busy = true;
+  setBusy(true);
+  resultsSection.classList.add('show');
+  qCard.innerHTML = skQ();
+  resultsTitle.textContent = 'Loading…';
+  resultsMeta.textContent  = '';
+  resultsGrid.innerHTML = Array(S.topN).fill(0).map(() => skCard()).join('');
+
+  try {
+    const p   = new URLSearchParams({ title, model: S.model, top_n: S.topN });
+    const r   = await fetch(`/api/recommend?${p}`);
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Request failed'); }
+    renderResults(await r.json());
+  } catch(e) {
+    showErr(e.message);
+  } finally {
+    S.busy = false;
+    setBusy(false);
+  }
+}
+
+function setBusy(on) {
+  recBtn.disabled = on;
+  recBtn.innerHTML = on
+    ? '<div class="spin"></div> Loading…'
+    : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Get Recommendations`;
+}
+
+// ── Render Results ────────────────────────────────────────────────────────────
+const MODEL_NAMES = { count:'CountVectorizer', tfidf:'TF-IDF', sbert:'SBERT' };
+
+function renderResults(d) {
+  resultsSection.classList.add('show');
+  resultsTitle.innerHTML = `Recommendations via <span>${MODEL_NAMES[d.model]}</span>`;
+  resultsMeta.textContent = `${d.results.length} results · query: "${d.query_title}"`;
+
+  qCard.innerHTML = qCardHTML(d.query_movie);
+
+  if (!d.results.length) {
+    resultsGrid.innerHTML = `<div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>No results found.</p></div>`;
+    return;
+  }
+
+  const maxSim = d.max_similarity || Math.max(...d.results.map(r => r.similarity));
+  resultsGrid.innerHTML = d.results.map(r => movieCardHTML(r, maxSim)).join('');
+
+  // animate bars after paint
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    resultsGrid.querySelectorAll('.sim-fill[data-w]').forEach(el => { el.style.width = el.dataset.w; });
+  }));
+
+  resultsSection.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function qCardHTML(m) {
+  const icon = m.type === 'Movie' ? '🎬' : '📺';
+  const tc   = m.type === 'Movie' ? 'type-movie' : 'type-tv';
+  return `
+    <div class="q-icon">${icon}</div>
+    <div class="q-body">
+      <div class="q-title">${h(m.title)}</div>
+      <div class="meta">
+        <span class="type-badge ${tc}">${h(m.type)}</span>
+        ${m.release_year ? `<span class="chip">${m.release_year}</span>` : ''}
+        ${m.rating       ? `<span class="chip">${h(m.rating)}</span>`      : ''}
+        ${m.duration     ? `<span class="chip">${h(m.duration)}</span>`    : ''}
+        ${m.country      ? `<span class="chip">${h(m.country)}</span>`     : ''}
+      </div>
+      ${m.genres.length ? `<div class="genres">${m.genres.slice(0,5).map(g=>`<span class="genre">${h(g)}</span>`).join('')}</div>` : ''}
+      ${m.description   ? `<div class="desc">${h(m.description)}</div>` : ''}
+    </div>`;
+}
+
+function movieCardHTML(m, maxSim) {
+  const rel = maxSim > 0 ? m.similarity / maxSim : 0;
+  const pct = Math.round(rel * 100);
+  const tier = rel > 0.72 ? 'h' : rel > 0.36 ? 'm' : 'l';
+  const tc   = m.type === 'Movie' ? 'type-movie' : 'type-tv';
+  const icon = m.type === 'Movie' ? '🎬' : '📺';
+
+  return `
+    <div class="mv-card">
+      <div class="card-top">
+        <div class="card-title">${h(m.title)}</div>
+        <span class="sim-badge sim-${tier}" title="Cosine similarity: ${m.similarity}">${pct}%</span>
+      </div>
+      <div class="sim-track">
+        <div class="sim-fill sim-fill-${tier}" data-w="${pct}%" style="width:0"></div>
+      </div>
+      <div class="meta">
+        <span class="type-badge ${tc}">${icon} ${h(m.type)}</span>
+        ${m.release_year ? `<span class="chip">${m.release_year}</span>` : ''}
+        ${m.rating       ? `<span class="chip">${h(m.rating)}</span>`    : ''}
+        ${m.duration     ? `<span class="chip">${h(m.duration)}</span>`  : ''}
+      </div>
+      ${m.genres.length ? `<div class="genres">${m.genres.slice(0,3).map(g=>`<span class="genre">${h(g)}</span>`).join('')}</div>` : ''}
+      ${m.description   ? `<div class="card-desc">${h(m.description)}</div>` : ''}
+      ${(m.director || m.cast?.length) ? `
+        <div class="card-footer">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          ${m.director ? `<span>${h(m.director)}</span>` : ''}
+          ${m.cast?.length ? `<span style="color:var(--text-3)">· ${m.cast.map(h).join(', ')}</span>` : ''}
+        </div>` : ''}
+    </div>`;
+}
+
+// ── Metrics Rendering ─────────────────────────────────────────────────────────
+const META = {
+  count: {
+    name:'CountVectorizer', sub:'Bag-of-Words · scikit-learn',
+    pros:['Fastest build time','Interpretable — exact word matches','Good for keyword-heavy queries'],
+    cons:["Ignores word importance weights","No semantic understanding"],
+  },
+  tfidf: {
+    name:'TF-IDF', sub:'Weighted Frequency · scikit-learn',
+    pros:['Down-weights common stop-words','More discriminative than count','Still very fast to build'],
+    cons:["No semantic understanding","Struggles with synonyms"],
+  },
+  sbert: {
+    name:'SBERT', sub:'Sentence Transformer · all-MiniLM-L6-v2',
+    pros:['Deep semantic similarity','Captures context & synonyms','Best recommendation quality'],
+    cons:["Slower to build (~10s)","Dense vectors use more memory"],
+  },
+};
+
+function renderMetrics(metrics) {
+  const maxBuild = Math.max(1, ...Object.values(metrics).map(m => m?.build_time || 0));
+  const maxSim   = Math.max(0.001, ...Object.values(metrics).map(m => m?.avg_similarity || 0));
+
+  metricsGrid.innerHTML = ['count','tfidf','sbert'].map(key => {
+    const m    = metrics[key] || {};
+    const meta = META[key];
+    const curr = key === S.model;
+    const br   = maxBuild > 0 ? ((m.build_time || 0) / maxBuild * 100).toFixed(1) : 0;
+    const sr   = maxSim   > 0 ? ((m.avg_similarity || 0) / maxSim * 100).toFixed(1) : 0;
+    const hasData = Object.keys(m).length > 0;
+
+    return `
+      <div class="m-card${curr ? ' current' : ''}">
+        <div class="m-name">${meta.name}</div>
+        <div class="m-sub">${meta.sub}</div>
+
+        ${hasData ? `
+          <div class="m-row"><span class="m-key">Build time</span><span class="m-val">${m.build_time}s</span></div>
+          <div class="m-bar"><div class="m-fill" style="width:${br}%"></div></div>
+          <div class="m-row"><span class="m-key">Avg cosine similarity</span><span class="m-val">${(m.avg_similarity||0).toFixed(4)}</span></div>
+          <div class="m-bar"><div class="m-fill" style="width:${sr}%"></div></div>
+          ${m.vocab_size  ? `<div class="m-row" style="margin-top:6px"><span class="m-key">Vocabulary size</span><span class="m-val">${m.vocab_size.toLocaleString()}</span></div>` : ''}
+          ${m.dimensions  ? `<div class="m-row" style="margin-top:6px"><span class="m-key">Embedding dims</span><span class="m-val">${m.dimensions}</span></div>` : ''}
+        ` : `<div style="color:var(--text-3);font-size:13px;margin:0.75rem 0">
+              ${S.status[key] === 'error' ? '❌ Failed to load' : '⏳ Building model…'}
+             </div>`}
+
+        <div class="pc-list">
+          ${meta.pros.map(p=>`<div class="pc pro"><span>✓</span><span>${p}</span></div>`).join('')}
+          ${meta.cons.map(c=>`<div class="pc con"><span>✗</span><span>${c}</span></div>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Error ─────────────────────────────────────────────────────────────────────
+function showErr(msg) {
+  resultsTitle.textContent = 'Error';
+  resultsMeta.textContent  = '';
+  qCard.innerHTML = '';
+  resultsGrid.innerHTML = `
+    <div class="empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <p>${h(msg)}</p>
+      <p style="font-size:12px;color:var(--text-3)">Make sure the title matches exactly. Try the autocomplete to find it.</p>
+    </div>`;
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const el = Object.assign(document.createElement('div'), { textContent: msg });
+  Object.assign(el.style, {
+    position:'fixed', bottom:'1.5rem', right:'1.5rem', zIndex:9999,
+    background:'#1e1e2e', border:'1px solid rgba(255,255,255,0.1)',
+    color:'#f0f0f0', padding:'12px 18px', borderRadius:'10px',
+    fontSize:'13px', boxShadow:'0 8px 32px rgba(0,0,0,0.5)', maxWidth:'300px',
+    animation:'toastIn .3s ease',
+  });
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = 0; setTimeout(() => el.remove(), 300); }, 3500);
+}
+
+// ── Skeletons ─────────────────────────────────────────────────────────────────
+function skCard() {
+  return `<div class="mv-card">
+    <div style="display:flex;justify-content:space-between;gap:8px">
+      <div class="sk" style="height:18px;width:65%;border-radius:4px"></div>
+      <div class="sk" style="height:18px;width:36px;border-radius:4px"></div>
+    </div>
+    <div class="sk" style="height:3px;border-radius:2px"></div>
+    <div style="display:flex;gap:6px">
+      <div class="sk" style="height:20px;width:56px;border-radius:100px"></div>
+      <div class="sk" style="height:20px;width:40px;border-radius:100px"></div>
+    </div>
+    <div class="sk" style="height:52px;border-radius:4px"></div>
+  </div>`;
+}
+
+function skQ() {
+  return `<div class="sk" style="width:52px;height:52px;border-radius:12px;flex-shrink:0"></div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+      <div class="sk" style="height:22px;width:180px;border-radius:4px"></div>
+      <div style="display:flex;gap:6px">
+        <div class="sk" style="height:18px;width:56px;border-radius:100px"></div>
+        <div class="sk" style="height:18px;width:38px;border-radius:100px"></div>
+        <div class="sk" style="height:18px;width:56px;border-radius:100px"></div>
+      </div>
+      <div class="sk" style="height:38px;border-radius:4px"></div>
+    </div>`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function h(s)    { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function attr(s) { return h(s); }
+function rxEsc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+</script>
+</body>
+</html>
