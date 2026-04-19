@@ -13,6 +13,10 @@
   An interactive deep-dive into how CountVectorizer, TF-IDF, and SBERT handle content-based recommendations — side by side, in real time.
 </p>
 
+<p align="center">
+  <img src="Netflix_Recommendation_Website.png" alt="Netflix Content Recommender Screenshot" width="850"/>
+</p>
+
 ---
 
 ## The Idea
